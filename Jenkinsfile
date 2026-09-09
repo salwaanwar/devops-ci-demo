@@ -1,3 +1,4 @@
+```groovy
 pipeline {
 
     agent any
@@ -18,24 +19,24 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'python3 -m py_compile app.py'
+                bat 'python -m py_compile app.py'
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Running automated tests...'
-                sh 'python3 -m pytest -v'
+                bat 'python -m pytest -v'
             }
         }
 
         stage('Validation') {
             steps {
                 echo 'Running additional validation...'
-                sh 'test -f app.py'
-                sh 'test -f test_app.py'
-                sh 'test -f requirements.txt'
-                sh 'grep -q "def add" app.py'
+                bat 'if not exist app.py exit /b 1'
+                bat 'if not exist test_app.py exit /b 1'
+                bat 'if not exist requirements.txt exit /b 1'
+                bat 'findstr /C:"def add" app.py >nul'
                 echo 'Additional validation completed successfully.'
             }
         }
@@ -55,3 +56,4 @@ pipeline {
         }
     }
 }
+```
