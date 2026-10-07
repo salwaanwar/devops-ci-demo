@@ -1,9 +1,15 @@
-from app import add, greet
+from app import app
 
 
-def test_add():
-    assert add(2, 3) == 5
+def test_home():
+    client = app.test_client()
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"DevOps CI/CD Pipeline is working!" in response.data
 
 
-def test_greet():
-    assert greet("Jenkins") == "Hello, Jenkins!"
+def test_health():
+    client = app.test_client()
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.status_code == 200

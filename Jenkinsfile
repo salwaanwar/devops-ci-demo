@@ -1,8 +1,10 @@
 pipeline {
+
     agent any
 
-    triggers {
-        githubPush()
+    environment {
+        DOCKER_IMAGE = 'salwaanwer/devops-ci-demo'
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -17,40 +19,54 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                bat '"C:/Users/habib/AppData/Local/Programs/Python/Python314/python.exe" -m py_compile app.py'
+                bat 'docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .'
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Running automated tests...'
-                bat '"C:/Users/habib/AppData/Local/Programs/Python/Python314/python.exe" -m pytest -v'
+                bat 'docker run --rm %DOCKER_IMAGE%:%IMAGE_TAG% python -m pytest'
             }
         }
 
-        stage('Validation') {
+        stage('Package') {
             steps {
-                echo 'Running additional validation...'
-                bat 'if not exist app.py exit /b 1'
-                bat 'if not exist test_app.py exit /b 1'
-                bat 'if not exist requirements.txt exit /b 1'
-                bat 'findstr /C:"def add" app.py >nul'
-                echo 'Additional validation completed successfully.'
+                echo 'Packaging Docker image...'
+                bat 'docker tag %DOCKER_IMAGE%:%IMAGE_TAG% %DOCKER_IMAGE%:latest'
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo 'Pushing Docker image to Docker Hub...'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+
+                    bat '''
+                    echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                    docker push %DOCKER_IMAGE%:%IMAGE_TAG%
+                    docker push %DOCKER_IMAGE%:latest
+                    docker logout
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'CI Pipeline completed successfully!'
+            echo 'CI/CD pipeline completed successfully!'
         }
 
         failure {
-            echo 'CI Pipeline failed. Check the Console Output.'
-        }
-
-        always {
-            echo 'Pipeline execution finished.'
+            echo 'CI/CD pipeline failed.'
         }
     }
 }
